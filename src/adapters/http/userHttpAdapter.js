@@ -1,9 +1,22 @@
+const {
+	validationResult
+} = require("express-validator");
+
 class UserHttpAdapter {
 	constructor(userRepository) {
 		this.userRepository = userRepository;
 	} // constructor es un metodo especial que se ejecuta en el momento de instanciar la clase
 
 	createUser(req, res) {
+
+		// Validacion de errores
+		const errors = validationResult(req);
+		if (!errors.isEmpty()) {
+			return res.status(400).json({
+				errors: errors.array()
+			});
+		}
+
 		const {
 			id,
 			name,
@@ -12,7 +25,7 @@ class UserHttpAdapter {
 		const user = this.userRepository.createUser({
 			id,
 			name,
-			email
+			email,
 		}); // esto es un metodo abstracto
 		res.json(user);
 	}
@@ -27,7 +40,7 @@ class UserHttpAdapter {
 			res.json(users);
 		} catch (error) {
 			res.status(404).json({
-				message: "Users not found"
+				message: "Users not found",
 			});
 		}
 	}

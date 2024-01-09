@@ -3,6 +3,9 @@ const bodyParser = require('body-parser');
 const {
 	Pool
 } = require('pg');
+const {
+	body
+} = require('express-validator');
 
 //configuracion de la base de datos
 const pool = new Pool({
@@ -18,8 +21,19 @@ function configureServer(UserHttpAdapter) {
 	const PORT = 3000;
 
 	app.use(bodyParser.json());
+	app.use((req, res, next) => {
+		res.setHeader("X-Content-Type-Options", "nosniff");
+		res.setHeader("X-Frame-Options", "DENY");
+		res.setHeader("Content-Security-Policy", "default-src 'self'");
+		next();
+	});
 
-	app.post("/users", (req, res) => UserHttpAdapter.createUser(req, res));
+
+	app.post("/users", [
+		body("id").optional().isInt(),
+		body("name").isString().notEmpty(),
+		body("email").isEmail(),
+	], (req, res, next) => UserHttpAdapter.createUser(req, res));
 
 	// Nueva ruta get para obtener todos los usuarios
 	app.get("/users", async (req, res) => {
@@ -55,6 +69,14 @@ function configureServer(UserHttpAdapter) {
 				message: "Error al obtener el usuario"
 			});
 		}
+	});
+
+	// middleware para manejar errores
+	app.use((err, req, res, next) => {
+		console.error(err.stack);
+		res.status(500).json({
+			message: "Internal server error"
+		});
 	});
 
 	app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
