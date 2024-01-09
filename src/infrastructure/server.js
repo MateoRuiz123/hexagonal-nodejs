@@ -1,5 +1,6 @@
 // src/infrastructure/server.js
 const express = require("express");
+const cookieParser = require("cookie-parser"); // importa el modulo cookie-parser
 const bodyParser = require("body-parser");
 const {
 	passport
@@ -9,12 +10,20 @@ const pool = require("./databasePool"); // Importa el pool de la base de datos
 const {
 	body
 } = require("express-validator");
+const configureServerFunction = require("./server"); // Importa la funcion configureServer
+
+const UserHttpAdapter = require("../adapters/http/userHttpAdapter"); // Importa el adaptador http de usuario
 
 function configureServer(UserHttpAdapter) {
 	const app = express();
 	const PORT = 3000;
 
 	app.use(bodyParser.json());
+	app.use(cookieParser()); // usa cookieParser
+
+	// Configuración de passport
+	app.use(passport.initialize());
+
 	app.use((req, res, next) => {
 		res.setHeader("X-Content-Type-Options", "nosniff");
 		res.setHeader("X-Frame-Options", "DENY");
@@ -22,12 +31,10 @@ function configureServer(UserHttpAdapter) {
 		next();
 	});
 
-	// Configuración de passport
-	app.use(passport.initialize());
-
 	// Middleware para proteger rutas con autenticación mediante JWT
 	async function authenticateJWT(req, res, next) {
-		const token = req.header("Authorization") ?.replace("Bearer ", "");
+		const token = req.cookies.authToken; // obtiene el token de la cookie
+		console.log("Token:", token);
 
 		if (!token) {
 			return res.status(401).json({
@@ -37,6 +44,7 @@ function configureServer(UserHttpAdapter) {
 
 		try {
 			const decoded = jwt.verify(token, "secret_key");
+			console.log("Decoded Token:", decoded);
 			req.user = decoded;
 			next();
 		} catch (e) {
@@ -58,6 +66,8 @@ function configureServer(UserHttpAdapter) {
 			}
 		}
 	}
+
+	app.use(passport.initialize()); // inicializa passport
 
 	// Rutas públicas
 	app.post("/login", (req, res) => UserHttpAdapter.loginUser(req, res));

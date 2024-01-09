@@ -34,7 +34,7 @@ class UserHttpAdapter {
 		res.json(user);
 	}
 
-	loginUser(req, res) {
+	async loginUser(req, res) {
 		passport.authenticate("local", {
 			session: false
 		}, (err, user, info) => {
@@ -46,6 +46,11 @@ class UserHttpAdapter {
 			}
 
 			const token = generateToken(user);
+			// almacena el token en una cookie
+			res.cookie("authToken", token, {
+				httpOnly: true
+			}) // httpOnly: true para que no se pueda acceder al token desde el navegador
+
 			return res.json({
 				token,
 			});

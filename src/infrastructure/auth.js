@@ -27,11 +27,20 @@ passport.use(new LocalStrategy({
 	}
 }));
 
+const jwtOptions = {
+	jwtFromRequest: ExtractJWT.fromExtractors([
+		ExtractJWT.fromUrlQueryParameter('token'),
+		ExtractJWT.fromBodyField('token'),
+		ExtractJWT.fromAuthHeaderAsBearerToken(),
+	]),
+	secretOrKey: 'secret_key',
+};
+
 // Configuración de la estrategia JWT
 passport.use(new JWTStrategy({
 	jwtFromRequest: ExtractJWT.fromAuthHeaderAsBearerToken(),
 	secretOrKey: 'secret_key'
-}, (jwtPayload, done) => {
+}, jwtOptions, (jwtPayload, done) => {
 	// Implementa la lógica para verificar y obtener el usuario desde el payload JWT
 	// Aquí asumimos que el ID del usuario está presente en el payload
 	const userId = jwtPayload.id;
@@ -60,5 +69,5 @@ function generateToken(user) {
 
 module.exports = {
 	passport,
-	generateToken,
+	generateToken
 };
