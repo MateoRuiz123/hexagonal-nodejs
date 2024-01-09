@@ -6,6 +6,10 @@ const {
 const {
 	body
 } = require('express-validator');
+const {
+	passport
+} = require("./auth");
+const jwt = require('jsonwebtoken');
 
 //configuracion de la base de datos
 const pool = new Pool({
@@ -28,6 +32,36 @@ function configureServer(UserHttpAdapter) {
 		next();
 	});
 
+	// configuracion de passport
+	app.use(passport.initialize());
+
+	// Middleware para proteger rutas con autenticación mediante JWT
+	function authenticateJWT(req, res, next) {
+		const token = req.header("Authorization") ?.replace("Bearer ", ""); // el signo de interrogacion es para que no de error si no existe el header
+
+		if (!token) {
+			return res.status(401).json({
+				message: "Unauthorized"
+			});
+		}
+
+		jwt.verify(token, "secret_key", (err, user) => {
+			if (err) {
+				return res.status(403).json({
+					message: "Forbidden",
+					error: err
+				});
+			}
+
+			req.user = user;
+			next();
+		});
+	}
+
+	// Rutas públicas
+	app.post("/login", (req, res) => userHttpAdapter.loginUser(req, res));
+
+
 
 	app.post("/users", [
 		body("id").optional().isInt(),
@@ -36,7 +70,7 @@ function configureServer(UserHttpAdapter) {
 	], (req, res, next) => UserHttpAdapter.createUser(req, res));
 
 	// Nueva ruta get para obtener todos los usuarios
-	app.get("/users", async (req, res) => {
+	app.get("/users", authenticateJWT, async (req, res) => {
 		try {
 			const result = await pool.query('SELECT * FROM users');
 			const users = result.rows;

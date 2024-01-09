@@ -1,6 +1,10 @@
 const {
 	validationResult
 } = require("express-validator");
+const {
+	passport,
+	generateToken
+} = require("../../infrastructure/auth");
 
 class UserHttpAdapter {
 	constructor(userRepository) {
@@ -28,6 +32,24 @@ class UserHttpAdapter {
 			email,
 		}); // esto es un metodo abstracto
 		res.json(user);
+	}
+
+	loginUser(req, res) {
+		passport.authenticate("local", {
+			session: false
+		}, (err, user, info) => {
+			if (err || !user) {
+				return res.status(401).json({
+					message: "Incorrect username or password",
+					error: err || info
+				});
+			}
+
+			const token = generateToken(user);
+			return res.json({
+				token
+			})
+		})(req, res)
 	}
 
 	getUserById(userId) {
