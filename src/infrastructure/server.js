@@ -9,11 +9,8 @@ const pool = require("./databasePool"); // Importa el pool de la base de datos
 const {
 	body
 } = require("express-validator");
-const configureServerFunction = require("./server"); // Cambia el nombre de la función importada
 
-const UserHttpAdapter = require("../adapters/http/userHttpAdapter");
-
-function configureServer(userHttpAdapter) { // Cambia el nombre de la función a configureServer
+function configureServer(UserHttpAdapter) {
 	const app = express();
 	const PORT = 3000;
 
@@ -29,78 +26,95 @@ function configureServer(userHttpAdapter) { // Cambia el nombre de la función a
 	app.use(passport.initialize());
 
 	// Middleware para proteger rutas con autenticación mediante JWT
-	function authenticateJWT(req, res, next) {
-		const token = req.header("Authorization") ?.replace("Bearer ", ""); // el signo de interrogacion es para que no de error si no existe el header
+	async function authenticateJWT(req, res, next) {
+		const token = req.header("Authorization") ?.replace("Bearer ", "");
 
 		if (!token) {
 			return res.status(401).json({
-				message: "Unauthorized"
+				message: "Unauthorized",
 			});
 		}
 
-		jwt.verify(token, "secret_key", (err, user) => {
-			if (err) {
-				return res.status(403).json({
-					message: "Forbidden",
-					error: err
+		try {
+			const decoded = jwt.verify(token, "secret_key");
+			req.user = decoded;
+			next();
+		} catch (e) {
+			if (e instanceof jwt.JsonWebTokenError) {
+				//token invalido
+				return res.status(401).json({
+					message: "Token invalido",
+				});
+			} else if (e instanceof jwt.TokenExpiredError) {
+				// token expirado
+				return res.status(401).json({
+					message: "Token expirado",
+				});
+			} else {
+				// otro error
+				return res.status(500).json({
+					message: "Internal server error",
 				});
 			}
-
-			req.user = user;
-			next();
-		});
+		}
 	}
 
 	// Rutas públicas
-	app.post("/login", (req, res) => userHttpAdapter.loginUser(req, res));
+	app.post("/login", (req, res) => UserHttpAdapter.loginUser(req, res));
 
-	app.post("/users", [
-		body("id").optional().isInt(),
-		body("name").isString().notEmpty(),
-		body("email").isEmail(),
-	], (req, res, next) => UserHttpAdapter.createUser(req, res));
+	app.post(
+		"/users",
+		[
+			body("id").optional().isInt(),
+			body("name").isString().notEmpty(),
+			body("email").isEmail(),
+		],
+		(req, res, next) => UserHttpAdapter.createUser(req, res)
+	);
 
 	// Nueva ruta get para obtener todos los usuarios
 	app.get("/users", authenticateJWT, async (req, res) => {
 		try {
-			const result = await pool.query('SELECT * FROM users');
+			const result = await pool.query("SELECT * FROM users");
 			const users = result.rows;
 			res.json(users);
 		} catch (error) {
-			console.error("Error al obtener los usuarios", error)
+			console.error("Error al obtener los usuarios", error);
 			res.status(500).json({
-				message: "Error al obtener los usuarios"
+				message: "Error al obtener los usuarios",
 			});
 		}
 	});
 
 	// Nueva ruta get para obtener un usuario por id
-	app.get("/users/:id", async (req, res) => {
-		const userId = req.params.id;
-		try {
-			const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-			const user = result.rows[0];
-			if (user) {
-				res.json(user);
-			} else {
-				res.status(404).json({
-					message: "User not found"
+	app.get("/users/:id",
+		authenticateJWT, async (req, res) => {
+			const userId = req.params.id;
+			try {
+				const result = await pool.query("SELECT * FROM users WHERE id = $1", [
+					userId,
+				]);
+				const user = result.rows[0];
+				if (user) {
+					res.json(user);
+				} else {
+					res.status(404).json({
+						message: "User not found",
+					});
+				}
+			} catch (error) {
+				console.error("Error al obtener el usuario", error);
+				res.status(500).json({
+					message: "Error al obtener el usuario",
 				});
 			}
-
-		} catch (error) {
-			console.error("Error al obtener el usuario", error)
-			res.status(500).json({
-				message: "Error al obtener el usuario"
-			});
-		}
-	});
+		});
 
 	// middleware para manejar errores
 	app.use((err, req, res, next) => {
 		console.error(err.stack);
 		res.status(500).json({
-			message: "Internal server error"
+			message: "Internal server error",
 		});
 	});
 
