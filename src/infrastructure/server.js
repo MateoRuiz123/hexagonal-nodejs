@@ -1,26 +1,19 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const {
-	Pool
-} = require('pg');
-const {
-	body
-} = require('express-validator');
+// src/infrastructure/server.js
+const express = require("express");
+const bodyParser = require("body-parser");
 const {
 	passport
 } = require("./auth");
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const pool = require("./databasePool"); // Importa el pool de la base de datos
+const {
+	body
+} = require("express-validator");
+const configureServerFunction = require("./server"); // Cambia el nombre de la función importada
 
-//configuracion de la base de datos
-const pool = new Pool({
-	user: 'postgres',
-	host: 'localhost',
-	database: 'hexagonal-nodejs-ejemplo',
-	password: '14122004',
-	port: 5432,
-});
+const UserHttpAdapter = require("../adapters/http/userHttpAdapter");
 
-function configureServer(UserHttpAdapter) {
+function configureServer(userHttpAdapter) { // Cambia el nombre de la función a configureServer
 	const app = express();
 	const PORT = 3000;
 
@@ -32,7 +25,7 @@ function configureServer(UserHttpAdapter) {
 		next();
 	});
 
-	// configuracion de passport
+	// Configuración de passport
 	app.use(passport.initialize());
 
 	// Middleware para proteger rutas con autenticación mediante JWT
@@ -60,8 +53,6 @@ function configureServer(UserHttpAdapter) {
 
 	// Rutas públicas
 	app.post("/login", (req, res) => userHttpAdapter.loginUser(req, res));
-
-
 
 	app.post("/users", [
 		body("id").optional().isInt(),
