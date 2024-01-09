@@ -14,7 +14,7 @@ function configureServer(UserHttpAdapter) {
 		const userId = req.params.id;
 		const user = UserHttpAdapter.getUserById(userId);
 
-		if (user) {
+		if (user) { 
 			res.json(user);
 		} else {
 			res.status(404).json({
