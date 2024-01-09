@@ -9,6 +9,12 @@ function configureServer(UserHttpAdapter) {
 
 	app.post("/users", (req, res) => UserHttpAdapter.createUser(req, res));
 
+	// Nueva ruta get para obtener todos los usuarios
+	app.get("/users", (req, res) => {
+		const users = UserHttpAdapter.getAllUsers(res);
+		res.json(users);
+	});
+
 	// Nueva ruta get para obtener un usuario por id
 	app.get("/users/:id", (req, res) => {
 		const userId = req.params.id;

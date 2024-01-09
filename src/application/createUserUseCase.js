@@ -15,6 +15,14 @@ class CreateUserUseCase {
 		});
 		return user;
 	}
+
+	getUserById(userId) {
+		return this.userRepository.getUserById(userId);
+	}
+
+	getAllUsers() {
+		return this.userRepository.getAllUsers();
+	}
 }
 
 module.exports = CreateUserUseCase;

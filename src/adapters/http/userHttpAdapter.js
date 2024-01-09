@@ -16,6 +16,21 @@ class UserHttpAdapter {
 		}); // esto es un metodo abstracto
 		res.json(user);
 	}
+
+	getUserById(userId) {
+		return this.userRepository.getUserById(userId);
+	}
+
+	getAllUsers(res) {
+		try {
+			const users = this.userRepository.getAllUsers();
+			res.json(users);
+		} catch (error) {
+			res.status(404).json({
+				message: "Users not found"
+			});
+		}
+	}
 }
 
 module.exports = UserHttpAdapter;
